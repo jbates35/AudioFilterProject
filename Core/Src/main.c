@@ -333,7 +333,7 @@ void ledStateCtrl_task(void *argument)
 	ledState ^= BIT1;
 	
 	// Set LED state for pin PE_1 to ledState
-	if (ledState)
+	if (ledState | BIT1)
 	{
 		HAL_GPIO_WritePin(LED_BANK_1, LED_PIN_1, GPIO_PIN_SET);	
 	} 
