@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -31,23 +32,68 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define LED_PIN_1 GPIO_PIN_1
+#define LED_BANK_1 GPIOE
+
+
+#define BIT0 0x1
+#define BIT1 0x2
+#define BIT2 0x4
+#define BIT3 0x8
+#define BIT4 0x10
+#define BIT5 0x20
+#define BIT6 0x40
+#define BIT7 0x80
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+uint16_t ledState;
 
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for toggleLED */
+osThreadId_t toggleLEDHandle;
+const osThreadAttr_t toggleLED_attributes = {
+  .name = "toggleLED",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for ledTimer */
+osTimerId_t ledTimerHandle;
+const osTimerAttr_t ledTimer_attributes = {
+  .name = "ledTimer"
+};
+/* Definitions for countSem1 */
+osSemaphoreId_t countSem1Handle;
+const osSemaphoreAttr_t countSem1_attributes = {
+  .name = "countSem1"
+};
 /* USER CODE BEGIN PV */
+uint16_t ledState;
+
+
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-/* USER CODE BEGIN PFP */
+void StartDefaultTask(void *argument);
+void ledStateCtrl_task(void *argument);
+void ledSwitch(void *argument);
+
 
 /* USER CODE END PFP */
 
@@ -88,6 +134,52 @@ int main(void)
 
   /* USER CODE END 2 */
 
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of countSem1 */
+  countSem1Handle = osSemaphoreNew(275000000, 275000000, &countSem1_attributes);
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* Create the timer(s) */
+  /* creation of ledTimer */
+  ledTimerHandle = osTimerNew(ledSwitch, osTimerPeriodic, NULL, &ledTimer_attributes);
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* creation of toggleLED */
+  toggleLEDHandle = osThreadNew(ledStateCtrl_task, NULL, &toggleLED_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -171,11 +263,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
 
+	ledState = 0x0;
+	
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, GPIO_PIN_0, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_1, GPIO_PIN_SET);
 
   /*Configure GPIO pin : PG0 */
   GPIO_InitStruct.Pin = GPIO_PIN_0;
@@ -199,9 +293,64 @@ static void MX_GPIO_Init(void)
 
 }
 
-/* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_ledStateCtrl_task */
+/**
+* @brief Function implementing the toggleLED thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_ledStateCtrl_task */
+void ledStateCtrl_task(void *argument)
+{
+  /* USER CODE BEGIN ledStateCtrl_task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(500);
+	  
+	// Toggle LED state
+	ledState ^= BIT1;
+	
+	// Set LED state for pin PE_1 to ledState
+	if (ledState)
+	{
+		HAL_GPIO_WritePin(LED_BANK_1, LED_PIN_1, GPIO_PIN_SET);	
+	} 
+	else
+	{
+		HAL_GPIO_WritePin(LED_BANK_1, LED_PIN_1, GPIO_PIN_RESET);			
+	}	
+	  
+  }
+  /* USER CODE END ledStateCtrl_task */
+}
+
+/* ledSwitch function */
+void ledSwitch(void *argument)
+{
+
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

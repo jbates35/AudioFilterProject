@@ -57,6 +57,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define timerVal 275000000
 
 /* USER CODE BEGIN Private defines */
 
